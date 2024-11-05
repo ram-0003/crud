@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Profile Management</title>
+</head>
+<body>
+    <div class="container">
+        <h2>Profile Management</h2>
+
+        <!-- Form to create/update profile -->
+        <form id="profileForm" enctype="multipart/form-data" method="POST" action="/profile">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="designation">Designation:</label>
+            <input type="text" id="designation" name="designation" required>
+
+            <label for="image">Profile Image:</label>
+            <input type="file" id="image" name="image">
+
+            <button type="submit">Create Profile</button>
+        </form>
+        
+        <!-- Section for displaying profiles -->
+        <div id="profilesSection">
+            <h3>Profiles</h3>
+            <div id="profilesList"></div>
+        </div>
+    </div>
+
+    <script>
+        async function loadProfiles() {
+            const res = await fetch('/profiles');
+            const profiles = await res.json();
+            const profilesList = document.getElementById('profilesList');
+            profilesList.innerHTML = ''; // Clear existing profiles
+
+            // Iterate over each profile and create HTML elements to display them
+            profiles.forEach(profile => {
+                console.log(profile);
+                console.log(`..${profile.imageUrl}`);
+                const profileDiv = document.createElement('div');
+                profileDiv.className = 'profile';
+                profileDiv.innerHTML = `
+                    <div class="profile-image">
+                        <img src="${profile.imageUrl}" alt="Profile Image">
+                    </div>
+                    <h4>${profile.name}</h4>
+                    <p>${profile.designation}</p>
+                    <button onclick="editProfile('${profile._id}', '${profile.name}', '${profile.designation}', '${profile.imageUrl}')">Edit</button>
+                    <form action="/profile/delete/${profile._id}" method="POST" style="display: inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                `;
+                profilesList.appendChild(profileDiv);
+            });
+        }
+
+        // Populate the form with the existing profile data for editing
+        function editProfile(id, name, designation, imageUrl) {
+            document.getElementById('name').value = name; // Set the name input field
+            document.getElementById('designation').value = designation; // Set the designation input field
+            document.getElementById('profileForm').action = `/profile/update/${id}`; // Change the form action to update
+        }
+
+        // Load profiles when the window is loaded
+        window.onload = loadProfiles;
+    </script>
+</body>
+</html>
