@@ -1,12 +1,10 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import path from 'path';
-import User from './models/User.js'; 
-import Profile from './models/Profile.js'; 
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { getCrud, getIndex, getLogin, getProfiles, getSignup, postDeleteProfile, postLogin, postProfile, postSignup, postUpdateProfile } from './controller/crud.controllers.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -36,93 +34,27 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Routes for rendering pages
-app.get('/', (req, res) => res.sendFile(path.join(process.cwd(), 'views', 'index.html')));
-app.get('/login', (req, res) => res.sendFile(path.join(process.cwd(), 'views', 'login.html')));
-app.get('/signup', (req, res) => res.sendFile(path.join(process.cwd(), 'views', 'signup.html')));
-app.get('/crud', (req, res) => res.sendFile(path.join(process.cwd(), 'views', 'crud.html')));
+app.get('/',getIndex);
+app.get('/login',getLogin);
+app.get('/signup',getSignup);
+app.get('/crud',getCrud);
 
 // Signup route
-app.post('/signup', async (req, res) => {
-    const { username, email, password } = req.body;
-    try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).send('User already exists');
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ username, email, password: hashedPassword });
-        await user.save();
-        res.status(200).redirect('/login');
-    } catch (error) {
-        res.status(500).send('Error signing up user');
-    }
-});
+app.post('/signup',postSignup);
 
 // Login route
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).send('User not found');
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).send('Invalid credentials');
-
-        res.status(200).redirect('/crud');  // Redirect to crud.html after successful login
-    } catch (error) {
-        res.status(500).send('Error logging in');
-    }
-});
+app.post('/login',postLogin);
 
 // Create Profile
-app.post('/profile', upload.single('image'), async (req, res) => {
-    console.log(req.body);
-    
-    const { name,designation } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
-
-    try {
-        const profile = new Profile({ name, imageUrl, designation });
-        await profile.save();
-        res.redirect('/crud');
-    } catch (error) {
-        res.status(500).send('Error creating profile');
-    }
-});
+app.post('/profile', upload.single('image'),postProfile);
 
 // Read Profiles (for rendering in HTML)
-app.get('/profiles', async (req, res) => {
-    try {
-        const profiles = await Profile.find().sort({ createdAt: -1 });
-        res.json(profiles);
-    } catch (error) {
-        res.status(500).send('Error fetching profiles');
-    }
-});
+app.get('/profiles',getProfiles);
 
 // Update Profile
-app.post('/profile/update/:id', upload.single('image'), async (req, res) => {
-    const { name,designation } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
-
-    try {
-        const updateData = { name,designation };
-        if (imageUrl) updateData.imageUrl = imageUrl;
-
-        await Profile.findByIdAndUpdate(req.params.id, updateData);
-        res.redirect('/crud');
-    } catch (error) {
-        res.status(500).send('Error updating profile');
-    }
-});
+app.post('/profile/update/:id', upload.single('image'),postUpdateProfile);
 
 // Delete Profile
-app.post('/profile/delete/:id', async (req, res) => {
-    try {
-        await Profile.findByIdAndDelete(req.params.id);
-        res.redirect('/crud');
-    } catch (error) {
-        res.status(500).send('Error deleting profile');
-    }
-});
+app.post('/profile/delete/:id',postDeleteProfile);
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
